@@ -26,9 +26,11 @@ if infile is not None:
     print(Bankdata.head())
     Bankdata1 = Bankdata.drop(columns=['Chq No','Balance','Init. Br'])
     print(Bankdata1.head())
-    with st.expander("View All Data"):
-           #st.dataframe(Bankdata[['Date','Withdrawals', 'Deposits','Description']])
-         st.text(Bankdata1.head())
+    def viewalldata(): 
+        with st.expander("View All Data"):
+             st.dataframe(Bankdata1)
+    if st.button("Click to view all data"):
+       viewalldata()      
     stinput = st.text_input("Enter keyword to search -")
     #
     if len(stinput) > 0:
