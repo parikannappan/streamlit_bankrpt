@@ -2,7 +2,7 @@
 """
 Created on Mon Jun  2 16:04:19 2025
 
-@author: ACER
+@author: PARI KANNAPPAN
 """
 
 import pandas as pd
@@ -52,10 +52,10 @@ if infile is not None:
        
         
        with st.expander("View Transactions"):
-          st.text(dfs2)   
+          st.dataframe(dfs2)   
          
     else:
-        print('stinput-2 ', stinput)
+        print('stinput- ', stinput)
         dfs1d = 0
         dfs1w = 0
          
