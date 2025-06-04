@@ -28,7 +28,7 @@ if infile is not None:
     print(Bankdata1.head())
     def viewalldata(): 
         with st.expander("View All Data"):
-             st.dataframe(Bankdata1)
+             st.dataframe(Bankdata)
     if st.button("Click to view all data"):
        viewalldata()      
     stinput = st.text_input("Enter keyword to search -")
@@ -51,9 +51,7 @@ if infile is not None:
        st.write(f':abacus: With - Dep = {sumdif}')
        dfs2 = dfs1[['Tran Date','Desc','Debit', 'Credit','Particulars']]
        nooftrans = len(dfs1) 
-       #-------
-       
-        
+       #------- 
        with st.expander(f' "View {nooftrans} Transactions of keyword" {stinput}'):
             st.dataframe(dfs2)   
          
