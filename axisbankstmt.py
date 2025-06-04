@@ -47,12 +47,13 @@ if infile is not None:
        sumdif = dfs1w - dfs1d
        st.write(f':money_with_wings: :red[Debit  -:  {dfs1w}]   :moneybag: :green[Credit   -:  {dfs1d}  ]')
        st.write(f':abacus: With - Dep = {sumdif}')
-       dfs2 = dfs1[['Tran Date','Debit', 'Credit','Particulars']]
+       dfs2 = dfs1[['Tran Date','Desc','Debit', 'Credit','Particulars']]
+       nooftrans = len(dfs1) 
        #-------
        
         
-       with st.expander("View Transactions"):
-          st.dataframe(dfs2)   
+       with st.expander(f' "View {nooftrans} Transactions of keyword" {stinput}'):
+            st.dataframe(dfs2)   
          
     else:
         print('stinput- ', stinput)
