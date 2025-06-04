@@ -48,7 +48,7 @@ if infile is not None:
        dfs1d = dfs1['Credit'].sum()
        sumdif = dfs1w - dfs1d
        st.write(f':money_with_wings: :red[Debit  -:  {dfs1w}]   :moneybag: :green[Credit   -:  {dfs1d}  ]')
-       st.write(f':abacus: With - Dep = {sumdif}')
+       st.write(f':abacus: Debit - Credi = {sumdif}')
        dfs2 = dfs1[['Tran Date','Desc','Debit', 'Credit','Particulars']]
        nooftrans = len(dfs1) 
        #------- 
