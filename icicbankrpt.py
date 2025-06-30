@@ -62,8 +62,7 @@ if fl is not None:
         selected_key =   st.multiselect(f' "you can choose keywords from drop down " ', few_trans) 
         st.dataframe(selected_key)
     choices = '|'.join(selected_key)  # Regex OR pattern
-    choice_data = Bankdata[Bankdata['Transaction Remarks'].str.contains(choices, case=False, regex=True)]
-    stinput = st.text_input("Enter keyword to search -") 
+    choice_data = Bankdata[Bankdata['Transaction Remarks'].str.contains(choices, case=False, regex=True)] 
     if len(selected_key) > 0:
       st.dataframe(choice_data)
     #
