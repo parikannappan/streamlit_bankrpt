@@ -8,6 +8,7 @@ Created on Wed Jun 19 18:13:14 2024
 import pandas as pd
 import streamlit as st 
 import xlrd
+import regex as re
 st.set_page_config(page_title="Bank Statement Search", page_icon="bank", layout="wide")
 st.title("  :bank: :blue[ICICI Bank Statement Search App]")
 fl = st.file_uploader(" Upload a file using 'Browse files' ", type=(["xls"]))
