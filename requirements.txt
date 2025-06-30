@@ -2,3 +2,4 @@ streamlit
 openpyxl
 #mitosheet
 streamlit-aggrid
+xlrd
