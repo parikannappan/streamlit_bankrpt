@@ -11,9 +11,7 @@ import xlrd
 st.set_page_config(page_title="Bank Statement Search", page_icon="bank", layout="wide")
 st.title("  :bank: :blue[ICICI Bank Statement Search App]")
 fl = st.file_uploader(" Upload a file using 'Browse files' ", type=(["xls"]))
-st.button("Rerun") 
-
- 
+#st.button("Rerun") 
 if fl is not None:
     @st.cache_data
     def load_data(fl):
@@ -41,7 +39,7 @@ if fl is not None:
        st.dataframe(top_5_withdrawals)   
     with st.expander("Top 5 Deposits"):  
        st.dataframe(top_5_deposits)
-    stinput = st.text_input("Enter keyword to search -")
+    
     #
     word_list = Bankdata['Transaction Remarks'].str.split().explode().tolist()
        #print(f'word_list', word_list)
@@ -62,9 +60,10 @@ if fl is not None:
     col1, col2 = st.columns(2)
     with col1:
         selected_key =   st.multiselect(f' "you can choose keywords for  " ', few_trans) 
-    st.dataframe(selected_key)
+        st.dataframe(selected_key)
     choices = '|'.join(selected_key)  # Regex OR pattern
     choice_data = Bankdata[Bankdata['Transaction Remarks'].str.contains(choices, case=False, regex=True)]
+    stinput = st.text_input("Enter keyword to search -") 
     if len(selected_key) > 0:
       st.dataframe(choice_data)
     #
