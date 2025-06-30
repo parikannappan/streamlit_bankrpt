@@ -30,7 +30,7 @@ if fl is not None:
     Bankdata = Bankdata.drop(['Unnamed: 0','Cheque Number'], axis=1)
     Bankdata['Transaction Remarks'].fillna('', inplace=True)
     with st.expander("View All Data"):
-       st.text(Bankdata[['Value Date','Withdrawals', 'Deposits','Transaction Remarks']])   
+       st.dataframe(Bankdata[['Value Date','Withdrawals', 'Deposits','Transaction Remarks']])   
     top_5_withdrawals = Bankdata.sort_values(by='Withdrawals', ascending=False).head(6)  
     #top_5_withdrawals = top_5_withdrawals.reset_index(drop=True)
     #top_5_wthdropt  = top_5_withdrawals.drop(index=0, axis=0, inplace=False) #drop Totals row
@@ -38,9 +38,9 @@ if fl is not None:
     #top_5_deposits = top_5_deposits.reset_index(drop=True)
     #top_5_depdropt  = top_5_deposits.drop(index=0, axis=0, inplace=False)
     with st.expander("Top 5 Withdrawls"):
-       st.text(top_5_withdrawals)   
+       st.dataframe(top_5_withdrawals)   
     with st.expander("Top 5 Deposits"):  
-       st.text(top_5_deposits)
+       st.dataframe(top_5_deposits)
     stinput = st.text_input("Enter keyword to search -")
     #
     word_list = Bankdata['Transaction Remarks'].str.split().explode().tolist()
@@ -62,11 +62,11 @@ if fl is not None:
     col1, col2 = st.columns(2)
     with col1:
         selected_key =   st.multiselect(f' "you can choose keywords for  " ', few_trans) 
-    st.text(selected_key)
+    st.dataframe(selected_key)
     choices = '|'.join(selected_key)  # Regex OR pattern
     choice_data = Bankdata[Bankdata['Transaction Remarks'].str.contains(choices, case=False, regex=True)]
     if len(selected_key) > 0:
-      st.text(choice_data)
+      st.dataframe(choice_data)
     #
     if len(stinput) > 0:
        print('stinput-1', stinput)
@@ -82,7 +82,7 @@ if fl is not None:
        st.write(f':money_with_wings: :red[WITHDRAWALS  -:  {dfs1w}]   :moneybag: :green[DEPOSITS   -:  {dfs1d}  ]')
        st.write(f':abacus: With - Dep = {sumdif}                 ')
        with st.expander("View Transactions"):
-          st.text(dfs1[['Value Date','Transaction', 'Withdrawals', 'Deposits','Transaction Remarks']]) 
+          st.dataframe(dfs1[['Value Date','Transaction', 'Withdrawals', 'Deposits','Transaction Remarks']]) 
        dfs2 = dfs1[['Value Date','Transaction', 'Withdrawals', 'Deposits','Transaction Remarks']]     
        
     
