@@ -61,6 +61,10 @@ if fl is not None:
     with col1:
         selected_key =   st.multiselect(f' "you can choose keywords from drop down " ', few_trans) 
         st.dataframe(selected_key)
+        all_matches = Bankdata['Transaction Remarks'].str.extractall(f'({"|".join(selected_key)})', flags=re.IGNORECASE)[0]
+        keyword_counts = all_matches.value_counts().reset_index()
+        keyword_counts.columns = ['Keyword', 'Count']
+        st.write(keyword_counts)
     choices = '|'.join(selected_key)  # Regex OR pattern
     choice_data = Bankdata[Bankdata['Transaction Remarks'].str.contains(choices, case=False, regex=True)] 
     if len(selected_key) > 0:
