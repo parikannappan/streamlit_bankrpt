@@ -64,6 +64,7 @@ if fl is not None:
     choices = '|'.join(selected_key)  # Regex OR pattern
     choice_data = Bankdata[Bankdata['Transaction Remarks'].str.contains(choices, case=False, regex=True)] 
     if len(selected_key) > 0:
+      st.write(f' :red[Search result not case sensitive ] ')  
       st.dataframe(choice_data)
     #
     stinput = st.text_input("Enter keyword to search -")
