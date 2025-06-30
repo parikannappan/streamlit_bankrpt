@@ -59,7 +59,7 @@ if fl is not None:
        #combined_set = set().union(*pt_set_list)
     col1, col2 = st.columns(2)
     with col1:
-        selected_key =   st.multiselect(f' "you can choose keywords for  " ', few_trans) 
+        selected_key =   st.multiselect(f' "you can choose keywords from drop down " ', few_trans) 
         st.dataframe(selected_key)
     choices = '|'.join(selected_key)  # Regex OR pattern
     choice_data = Bankdata[Bankdata['Transaction Remarks'].str.contains(choices, case=False, regex=True)]
@@ -67,6 +67,7 @@ if fl is not None:
     if len(selected_key) > 0:
       st.dataframe(choice_data)
     #
+    stinput = st.text_input("Enter keyword to search -")
     if len(stinput) > 0:
        print('stinput-1', stinput)
        #print(np.isnan(stinput))
