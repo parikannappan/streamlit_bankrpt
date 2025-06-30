@@ -61,7 +61,7 @@ if fl is not None:
     col1, col2 = st.columns(2)
     with col1:
         selected_key =   st.multiselect(f' "you can choose keywords from drop down " ', few_trans) 
-        st.dataframe(selected_key)
+        #st.dataframe(selected_key)
         all_matches = Bankdata['Transaction Remarks'].str.extractall(f'({"|".join(selected_key)})', flags=re.IGNORECASE)[0]
         keyword_counts = all_matches.value_counts().reset_index()
         keyword_counts.columns = ['Keyword', 'Count']
