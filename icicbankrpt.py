@@ -73,6 +73,7 @@ if fl is not None:
         choice_data['Transaction Remarks']
        .str.extract(f'({"|".join(selected_key)})', flags=re.IGNORECASE, expand=False)
        )
+    choice_data = choice_data.drop(['Value Date'], axis=1)
     if len(selected_key) > 0:
       st.write(f' :red[Search result not case sensitive ] ')  
       st.dataframe(choice_data)
