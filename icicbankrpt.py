@@ -67,7 +67,12 @@ if fl is not None:
         keyword_counts.columns = ['Keyword', 'Count']
         st.table(keyword_counts)
     choices = '|'.join(selected_key)  # Regex OR pattern
-    choice_data = Bankdata[Bankdata['Transaction Remarks'].str.contains(choices, case=False, regex=True)] 
+    #choice_data = Bankdata[Bankdata['Transaction Remarks'].str.contains(choices, case=False, regex=True)]
+    choice_data = Bankdata[Bankdata['Transaction Remarks'].str.contains(choices, case=False, regex=True, na=False)].copy()
+    choice_data['Matched_Keyword'] = (
+        choice_data['Transaction Remarks']
+       .str.extract(f'({"|".join(selected_key)})', flags=re.IGNORECASE, expand=False)
+       )
     if len(selected_key) > 0:
       st.write(f' :red[Search result not case sensitive ] ')  
       st.dataframe(choice_data)
