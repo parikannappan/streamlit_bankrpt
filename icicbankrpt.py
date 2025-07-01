@@ -11,7 +11,7 @@ import xlrd
 import regex as re
 st.set_page_config(page_title="Bank Statement Search", page_icon="bank", layout="wide")
 st.title("  :bank: :blue[ICICI Bank Statement Search App]")
-fl = st.file_uploader(" :red['Upload a file using 'Browse files type xls'] ", type=(["xls"]))
+fl = st.file_uploader(" :red[Upload a file using 'Browse files' type xls] ", type=(["xls"]))
 #st.button("Rerun") 
 if fl is not None:
     @st.cache_data
