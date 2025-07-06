@@ -38,7 +38,7 @@ if fl is not None:
     #top_5_depdropt  = top_5_deposits.drop(index=0, axis=0, inplace=False)
     with st.expander("Top 5 Withdrawls"):
        st.dataframe(top_5_withdrawals)  
-       st.bar_chart(top_5_withdrawals[['Value Date', 'Withdrawals']], color=["#FF0000", "#0000FF"]) 
+       st.bar_chart(top_5_withdrawals[['Value Date', 'Withdrawals']], color=["#0000FF"]).set_index('Value Data')  
     with st.expander("Top 5 Deposits"):  
        st.dataframe(top_5_deposits)
     
@@ -79,7 +79,7 @@ if fl is not None:
     if len(selected_key) > 0:
       st.write(f' :red[Search result not case sensitive ] ')  
       st.dataframe(choice_data)
-      st.bar_chart(choice_data[['Value Date', 'Withdrawals', 'Deposits', 'Matched_Keyword']], color="Matched_Keyword")  
+      st.bar_chart(choice_data[['Value Date', 'Withdrawals', 'Deposits', 'Matched_Keyword']], color="Matched_Keyword").set_index('Value Data')   
     #
     stinput = st.text_input("Enter keyword to search -")
     if len(stinput) > 0:
