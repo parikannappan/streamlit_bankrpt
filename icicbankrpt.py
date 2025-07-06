@@ -98,7 +98,7 @@ if fl is not None:
           st.dataframe(dfs2) 
        
        with st.expander("View All Data"):
-       st.dataframe(Bankdata[['Value Date','Withdrawals', 'Deposits','Transaction Remarks']])  
+          st.dataframe(Bankdata[['Value Date','Withdrawals', 'Deposits','Transaction Remarks']])  
        
     
     else:
