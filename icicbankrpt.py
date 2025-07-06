@@ -79,7 +79,7 @@ if fl is not None:
     if len(selected_key) > 0:
       st.write(f' :red[Search result not case sensitive ] ')  
       st.dataframe(choice_data)
-      st.bar_chart(choice_data[['Transaction Date', 'Withdrawals', 'Deposits', 'Matched_Keyword']], x='Transaction Date', y=['Withdrawals', 'Deposits'], color='Matched_Keyword')
+      st.bar_chart(choice_data[['Transaction Date', 'Withdrawals', 'Deposits', 'Matched_Keyword']], x='Matched_Keyword', y=['Withdrawals', 'Deposits'], color='Matched_Keyword')
     #
     stinput = st.text_input("Enter keyword to search -")
     if len(stinput) > 0:
