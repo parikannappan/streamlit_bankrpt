@@ -37,7 +37,8 @@ if fl is not None:
     #top_5_deposits = top_5_deposits.reset_index(drop=True)
     #top_5_depdropt  = top_5_deposits.drop(index=0, axis=0, inplace=False)
     with st.expander("Top 5 Withdrawls"):
-       st.dataframe(top_5_withdrawals)   
+       st.dataframe(top_5_withdrawals)  
+       st.bar_chart(top_5_withdrawals[['Value Date', 'Withdrawals']], color=["#FF0000", "#0000FF"]).set_index('Value Date')   
     with st.expander("Top 5 Deposits"):  
        st.dataframe(top_5_deposits)
     
