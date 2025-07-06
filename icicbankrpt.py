@@ -28,8 +28,8 @@ if fl is not None:
     Bankdata['Deposits']= pd.to_numeric(Bankdata['Deposits'],  errors='coerce')
     Bankdata = Bankdata.drop(['Unnamed: 0','Cheque Number'], axis=1)
     Bankdata['Transaction Remarks'].fillna('', inplace=True)
-    with st.expander("View All Data"):
-       st.dataframe(Bankdata[['Value Date','Withdrawals', 'Deposits','Transaction Remarks']])   
+    # Bankdata will be displayed at the end of the page
+      
     top_5_withdrawals = Bankdata.sort_values(by='Withdrawals', ascending=False).head(6)  
     #top_5_withdrawals = top_5_withdrawals.reset_index(drop=True)
     #top_5_wthdropt  = top_5_withdrawals.drop(index=0, axis=0, inplace=False) #drop Totals row
@@ -93,9 +93,12 @@ if fl is not None:
        sumdif = dfs1w - dfs1d
        st.write(f':money_with_wings: :red[WITHDRAWALS  -:  {dfs1w}]   :moneybag: :green[DEPOSITS   -:  {dfs1d}  ]')
        st.write(f':abacus: With - Dep = {sumdif}                 ')
+       dfs2 = dfs1[['Value Date','Transaction', 'Withdrawals', 'Deposits','Transaction Remarks']] 
        with st.expander("View Transactions of input {stinput}"):
-          st.dataframe(dfs1[['Value Date','Transaction', 'Withdrawals', 'Deposits','Transaction Remarks']]) 
-       dfs2 = dfs1[['Value Date','Transaction', 'Withdrawals', 'Deposits','Transaction Remarks']]     
+          st.dataframe(dfs2) 
+       
+       with st.expander("View All Data"):
+       st.dataframe(Bankdata[['Value Date','Withdrawals', 'Deposits','Transaction Remarks']])  
        
     
     else:
