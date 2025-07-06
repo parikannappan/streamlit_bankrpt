@@ -93,7 +93,7 @@ if fl is not None:
        sumdif = dfs1w - dfs1d
        st.write(f':money_with_wings: :red[WITHDRAWALS  -:  {dfs1w}]   :moneybag: :green[DEPOSITS   -:  {dfs1d}  ]')
        st.write(f':abacus: With - Dep = {sumdif}                 ')
-       with st.expander("View Transactions"):
+       with st.expander("View Transactions of input {stinput}"):
           st.dataframe(dfs1[['Value Date','Transaction', 'Withdrawals', 'Deposits','Transaction Remarks']]) 
        dfs2 = dfs1[['Value Date','Transaction', 'Withdrawals', 'Deposits','Transaction Remarks']]     
        
