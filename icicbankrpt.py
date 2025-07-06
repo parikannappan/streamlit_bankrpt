@@ -65,7 +65,8 @@ if fl is not None:
         all_matches = Bankdata['Transaction Remarks'].str.extractall(f'({"|".join(selected_key)})', flags=re.IGNORECASE)[0]
         keyword_counts = all_matches.value_counts().reset_index()
         keyword_counts.columns = ['Keyword', 'Count']
-        st.table(keyword_counts)
+        if len(keyword_counts) > 0:
+           st.table(keyword_counts)
     choices = '|'.join(selected_key)  # Regex OR pattern
     #choice_data = Bankdata[Bankdata['Transaction Remarks'].str.contains(choices, case=False, regex=True)]
     choice_data = Bankdata[Bankdata['Transaction Remarks'].str.contains(choices, case=False, regex=True, na=False)].copy()
