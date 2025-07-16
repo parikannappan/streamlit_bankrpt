@@ -22,7 +22,7 @@ if infile is not None:
                header=2)
         return Bankdata
     Bankdata = load_data(infile)
-    print(Bankdata.head())
+    #print(Bankdata.head())
     Bankdata1 = Bankdata.drop(columns=['Chq No','Balance','Init. Br'])
     print(Bankdata1.head())
     def viewalldata(): 
@@ -39,7 +39,7 @@ if infile is not None:
        #Bankdata1 = Bankdata1.replace(["NaN", "nan", "null", "NA"], np.nan)  
        Bankdata2 = Bankdata1.dropna(subset=['Particulars'])
        Bankdata2['Tran Date'] = pd.to_datetime(Bankdata2['Tran Date'], errors='coerce')
-       print(Bankdata2.head(10))
+       #print(Bankdata2.head(10))
        dfs1 = Bankdata2.loc[Bankdata2['Particulars'].str.contains(stinput, case=False)]
        def functrunc(description):
         
@@ -49,6 +49,7 @@ if infile is not None:
        dfs1w = dfs1['Debit'].sum()
        dfs1d = dfs1['Credit'].sum()
        sumdif = dfs1w - dfs1d
+
        st.write(f':money_with_wings: :red[Debit  -:  {dfs1w}]   :moneybag: :green[Credit   -:  {dfs1d}  ]')
        st.write(f':abacus: With - Dep = {sumdif}')
        dfs2 = dfs1[['Tran Date', 'Desc', 'Debit', 'Credit','Particulars']]
@@ -56,16 +57,21 @@ if infile is not None:
        #pt_list = dfs2['Particulars'].tolist()
        word_list = dfs2['Particulars'].str.split().explode().tolist() 
        word_list = [word for word in word_list if not word.endswith(',')]
-
        words_set = set(word_list)
-       few_trans = list(words_set)
+       few_trans_all = list(words_set)
+       mischr_list = ['IN','OF','of','FROM', '+', 'ORG','from', 'To','R','N',
+                      '-','Ref:','NO', 'in','F','B']
+       few_trans = [item for item in few_trans_all if item not in mischr_list ]
        #combined_set = set().union(*pt_set_list)
-       selected_key =   st.multiselect(f' "you can choose keywords for {stinput} " ', few_trans)
+       col1, col2 = st.columns(2)
+       with col1:
+        selected_key =   st.multiselect(f' "you can choose keywords for {stinput} " ', few_trans) 
        st.text(selected_key)
        choices = '|'.join(selected_key)  # Regex OR pattern
        dfs3 = dfs2[dfs2['Particulars'].str.contains(choices, case=False, regex=True)]
-       st.text(dfs3)
-       with st.expander(f' "View {nooftrans} Transactions of keyword" {stinput}'):
+       if len(selected_key) > 0:
+        st.text(dfs3)
+       with st.expander(f' "View All {nooftrans} Transactions of keyword" {stinput}'):
           st.text(dfs2)
     else:
      print('stinput-2 ', stinput)
@@ -80,6 +86,12 @@ if infile is not None:
     enddate   = pd.to_datetime(Bankdata1['Tran Date']).max()
     startfrt  = startdate.strftime('%d-%m-%Y')
     endfrt    = enddate.strftime('%d-%m-%Y')
+    dfs4      = Bankdata1
+    dfs4['month'] = dfs4['Tran Date'].dt.to_period('M').astype(str) 
+    print('printing dfs4')
+    print(dfs4.head(20))
+    month_list = sorted(dfs4['month'].unique(), reverse=True)   # newest first
+    
     st.write(f'View data choosing dates.   Available date range {startfrt} -- {endfrt}')
        #st.write(f' View data choosing dates -- available data range {} -- {}')
     col3, col4 = st.columns(2)
@@ -91,8 +103,11 @@ if infile is not None:
     noofrows = len(df_datr)
     with st.container():     
         with st.expander(f' :green["View Data with Above date range" which has {noofrows} Transactions]'):
-          st.text(df_datr)   
-       
+          st.text(df_datr)
+
+    selected_month = st.selectbox('Select month', month_list)
+    filtered_month = dfs4[dfs4['month'] == selected_month]
+    st.dataframe(filtered_month)       
              
     
          
