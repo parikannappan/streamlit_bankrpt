@@ -91,6 +91,7 @@ if infile is not None:
     print('printing dfs4')
     print(dfs4.head(20))
     month_list = sorted(dfs4['month'].unique(), reverse=True)   # newest first
+    month_list.remove('NaT')
     
     st.write(f'View data choosing dates.   Available date range {startfrt} -- {endfrt}')
        #st.write(f' View data choosing dates -- available data range {} -- {}')
