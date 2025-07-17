@@ -106,6 +106,7 @@ if infile is not None:
           st.text(df_datr)
 
     selected_month = st.selectbox('Select month', month_list)
-    filtered_month = dfs4[dfs4['month'] == selected_month]
-    st.dataframe(filtered_month)       
+    filtered_month_data = dfs4[dfs4['month'] == selected_month]
+    filtered_month_data_noNaT = filtered_month_data.dropna(subset=['date']) 
+    st.dataframe(filtered_month_noNaT)       
  
