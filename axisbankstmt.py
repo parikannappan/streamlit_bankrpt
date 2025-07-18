@@ -54,7 +54,9 @@ if infile is not None:
        st.write(f':abacus: With - Dep = {sumdif}')
        dfs2 = dfs1[['Tran Date', 'Desc', 'Debit', 'Credit','Particulars']]
        nooftrans = len(dfs1)
-       #pt_list = dfs2['Particulars'].tolist()
+       with st.expander(f' "View All {nooftrans} Transactions of keyword" {stinput}'):
+          st.dataframe(dfs2)
+        #pt_list = dfs2['Particulars'].tolist()
        word_list = dfs2['Particulars'].str.split().explode().tolist() 
        word_list = [word for word in word_list if not word.endswith(',')]
        words_set = set(word_list)
@@ -71,8 +73,7 @@ if infile is not None:
        dfs3 = dfs2[dfs2['Particulars'].str.contains(choices, case=False, regex=True)]
        if len(selected_key) > 0:
         st.dataframe(dfs3)
-       with st.expander(f' "View All {nooftrans} Transactions of keyword" {stinput}'):
-          st.dataframe(dfs2)
+       
     else:
      print('stinput-2 ', stinput)
      dfs1d = 0
