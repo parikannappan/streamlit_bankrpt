@@ -27,8 +27,8 @@ if infile is not None:
     print(Bankdata1.head())
     def viewalldata(): 
         with st.expander("View All Data"):
-           #st.dataframe(Bankdata[['Date','Withdrawals', 'Deposits','Description']])
-          st.text(Bankdata1)
+           st.dataframe(Bankdata[['Date','Withdrawals', 'Deposits','Description']])
+          #st.text(Bankdata1)
     if st.button("Click to viewalldata"):
        viewalldata()      
     stinput = st.text_input("Enter keyword to search -")
@@ -66,13 +66,13 @@ if infile is not None:
        col1, col2 = st.columns(2)
        with col1:
         selected_key =   st.multiselect(f' "you can choose keywords for {stinput} " ', few_trans) 
-       st.text(selected_key)
+       st.table(selected_key)
        choices = '|'.join(selected_key)  # Regex OR pattern
        dfs3 = dfs2[dfs2['Particulars'].str.contains(choices, case=False, regex=True)]
        if len(selected_key) > 0:
-        st.text(dfs3)
+        st.dataframe(dfs3)
        with st.expander(f' "View All {nooftrans} Transactions of keyword" {stinput}'):
-          st.text(dfs2)
+          st.dataframe(dfs2)
     else:
      print('stinput-2 ', stinput)
      dfs1d = 0
