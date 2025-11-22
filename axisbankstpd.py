@@ -154,10 +154,10 @@ if uploaded_file is not None:
 
         st.write(f"**Showing {len(filtered_df):,} transactions**")
 
-        # SEARCH SUMMARY (Only if search term is entered)
-        if search_term:
+        ## SEARCH SUMMARY (Only if search term is entered)
+        if search_term.strip():
             st.markdown("---")
-            st.subheader(f"Search Summary for: **{search_term.upper()}**")
+            st.subheader(f"Search Summary: **{search_term.upper()}**")
 
             total_debit = filtered_df["Debit"].sum()
             total_credit = filtered_df["Credit"].sum()
@@ -165,43 +165,55 @@ if uploaded_file is not None:
 
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                st.metric("Transactions Found", len(filtered_df))
+                st.metric("Transactions", len(filtered_df))
             with col2:
-                st.metric("Total Spent (Debit)", f"₹{total_debit:,.2f}", delta=None)
+                st.metric("Total Spent", f"₹{total_debit:,.2f}")
             with col3:
-                st.metric("Total Received (Credit)", f"₹{total_credit:,.2f}")
+                st.metric("Total Received", f"₹{total_credit:,.2f}")
             with col4:
-                st.metric("Net Flow", f"₹{net:,.2f}", delta="Good" if net > 0 else "Bad")
+                st.metric("Net", f"₹{net:,.2f}", delta="+" if net > 0 else None)
 
-            # Top Merchants
+            # Top Merchants Summary
             top_merchants = filtered_df.groupby("Merchant").agg({
                 "Debit": "sum",
                 "Credit": "sum",
                 "Particulars": "count"
-            }).rename(columns={"Particulars": "Count"}).sort_values("Debit", ascending=False).head(8)
+            }).rename(columns={"Particulars": "Count"}).round(2)
+            top_merchants = top_merchants.sort_values("Debit", ascending=False).head(10)
 
-            col1, col2 = st.columns(2)
+            col1, col2 = st.columns([2, 2])
+
             with col1:
                 st.write("**Top Payees / Merchants**")
-                st.dataframe(top_merchants.style.format({
-                    "Debit": "₹{:.2f}",
-                    "Credit": "₹{:.2f}",
-                    "Count": "{:.0f}"
-                }), use_container_width=True)
+                st.dataframe(
+                    top_merchants.style.format({
+                        "Debit": "₹{:.2f}",
+                        "Credit": "₹{:.2f}",
+                        "Count": "{:.0f}"
+                    }),
+                    use_container_width=True
+                )
 
             with col2:
-                # Inside the summary:
-
-                if len(top_merchants) > 1:
-                    fig, ax = plt.subplots()
-                    top_merchants.head(5).plot(kind='bar', y='Debit', ax=ax, color='skyblue')
-                    ax.set_title("Top Spending")
-                    ax.set_ylabel("Amount (₹)")
-                    plt.xticks(rotation=45)
+                if len(top_merchants) > 1 and total_debit > 0:
+                    st.write("**Spending Breakdown**")
+                    fig, ax = plt.subplots(figsize=(6, 4.5))
+                    colors = plt.cm.Set3(range(len(top_merchants)))
+                    wedges, texts, autotexts = ax.pie(
+                        top_merchants["Debit"],
+                        labels=top_merchants.index,
+                        autopct=lambda pct: f"₹{int(pct/100*total_debit)}\n({pct:.1f}%)" if pct > 5 else "",
+                        startangle=90,
+                        colors=colors,
+                        textprops={'fontsize': 10}
+                    )
+                    ax.axis('equal')
+                    ax.set_title("Where the money went", fontsize=12, pad=15)
+                    plt.tight_layout()
                     st.pyplot(fig)
-                            
-                    fig.update_traces(textposition='inside', textinfo='percent+label')
-                    st.plotly_chart(fig, use_container_width=True)
+                    plt.close(fig)  # Prevent memory leak
+                else:
+                    st.info("Not enough spending data for a chart.")
 
         # Show Data Table
         display_df = filtered_df[['Tran Date', 'Particulars', 'Debit', 'Credit', 'Balance']].copy()
@@ -231,4 +243,5 @@ else:
     - Instant summary when you search (e.g. "Zomato", "Swiggy", "PLAYO")
     - Top merchants & pie chart
     - Export filtered data
+
     """)
