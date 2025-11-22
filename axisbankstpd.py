@@ -135,8 +135,8 @@ if uploaded_file:
 
         # Summary Cards
         col1, col2, col3, col4 = st.columns(4)
-        with col1: st metric("Total Spent", f"₹{df['Debit'].sum():,.0f}")
-        with col2: st metric("Total Received", f"₹{df['Credit'].sum():,.0f}")
+        with col1: st.metric("Total Spent", f"₹{df['Debit'].sum():,.0f}")
+        with col2: st.metric("Total Received", f"₹{df['Credit'].sum():,.0f}")
         with col3: st.metric("Net Change", f"₹{df['Credit'].sum() - df['Debit'].sum():,.0f}")
         with col4: st.metric("Final Balance", f"₹{df['Balance'].iloc[-1]:,.0f}")
 
@@ -198,3 +198,4 @@ if uploaded_file:
 else:
     st.info("Upload your Axis Bank PDF statement to begin!")
     st.markdown("### Features\n- Auto-categorizes every transaction\n- Dark/Light mode\n- Search with instant summary\n- Beautiful charts\n- Export to CSV")
+
