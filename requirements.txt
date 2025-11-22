@@ -4,3 +4,4 @@ openpyxl
 streamlit-aggrid
 xlrd
 regex
+pdfplumber
