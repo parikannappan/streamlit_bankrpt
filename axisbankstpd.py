@@ -1,200 +1,244 @@
-# axis_bank_analyzer.py - FINAL VERSION
+# app.py - With Search Summary + Charts
 import streamlit as st
 import pdfplumber
 import pandas as pd
 import re
 from datetime import datetime
 from io import BytesIO
-import matplotlib.pyplot as plt
+#import plotly.express as px
 
-# ========================= DARK MODE & PAGE CONFIG =========================
-st.set_page_config(page_title="My Axis Bank Analyzer", layout="wide")
-
-# Dark mode toggle
-if "theme" not in st.session_state:
-    st.session_state.theme = "light"
-
-def toggle_theme():
-    st.session_state.theme = "dark" if st.session_state.theme == "light" else "light"
-
-theme_button = st.sidebar.button("Toggle Dark Mode" if st.session_state.theme == "light" else "Toggle Light Mode")
-if theme_button:
-    toggle_theme()
-
-# Apply theme
-if st.session_state.theme == "dark":
-    st.markdown("""
-    <style>
-    .css-1d391kg, .css-1v0mbdj, .css-1y0t8qx {background-color: #0e1117; color: white;}
-    .css-1q8dd2e {color: white;}
-    </style>
-    """, unsafe_allow_html=True)
-    plt.style.use('dark_background')
-
-# ========================= CATEGORY MAPPING =========================
-CATEGORIES = {
-    # Food & Dining
-    "FOOD": ["Zomato", "Swiggy", "Domino", "KFC", "McDonald", "Cafe", "Restaurant", "Dairy", "Tea", "Food Corner", "Hanuman Store"],
-    "GROCERIES": ["DMart", "Reliance", "More", "BigBasket", "Arun Fruits", "Vegetables", "Rice", "Chowdeshwari"],
-    "FUEL": ["Petrol", "Bharat Petroleum", "Indian Oil", "HP", "Nayara"],
-    "SHOPPING": ["Amazon", "Flipkart", "Myntra", "Medplus", "Health Mart", "Go Daddy"],
-    "TRAVEL": ["BMTC", "Metro", "Uber", "Ola", "Rapido", "Redbus", "MakeMyTrip"],
-    "BILLS": ["Atria Broadband", "Electricity", "Jio", "Airtel", "Water Bill", "PhonePe", "Recharge"],
-    "ENTERTAINMENT": ["Playo", "BookMyShow", "Netflix", "Spotify", "Church", "Resurrection"],
-    "HEALTH": ["Pharmacy", "Medplus", "Apollo", "Health", "Davaindia"],
-    "EDUCATION": ["Byjus", "Unacademy", "Fees"],
-    "INVESTMENT": ["Paytm Money", "Edelweiss", "Mutual Fund"],
-    "TRANSFER": ["UPI/P2A", "NEFT", "IMPS", "ARULANA", "ILLANGOVAN", "PARI KANNAPPAN", "Self", "Return"],
-    "OTHERS": []
-}
-
-def categorize_transaction(desc):
-    desc_upper = desc.upper()
-    for category, keywords in CATEGORIES.items():
-        if any(k.upper() in desc_upper for k in keywords):
-            return category
-    if "UPI" in desc_upper or "NEFT" in desc_upper or "IMPS" in desc_upper:
-        return "TRANSFER"
-    return "OTHERS"
-
-# ========================= PDF PARSING (Your Working Version) =========================
+# ------------------- PDF Parsing Function (Same as working version) -------------------
 def parse_axis_pdf(file_bytes):
     all_rows = []
     with pdfplumber.open(BytesIO(file_bytes)) as pdf:
         for page in pdf.pages:
             text = page.extract_text()
-            if not text: continue
+            if not text:
+                continue
+
             lines = text.split("\n")
             in_table = False
             current_row = None
 
             for line in lines:
                 line = line.strip()
+
                 if "Tran Date" in line and "Particulars" in line:
                     in_table = True
                     continue
-                if not in_table: continue
-                if any(skip in line.upper() for skip in ["OPENING BALANCE", "CLOSING BALANCE", "TRANSACTION TOTAL", "END OF STATEMENT"]):
+
+                if not in_table:
+                    continue
+
+                if any(skip in line.upper() for skip in ["OPENING BALANCE", "CLOSING BALANCE", "TRANSACTION TOTAL",
+                                                         "END OF STATEMENT", "LEGENDS", "UNLESS THE CONSTITUENT"]):
                     continue
 
                 date_match = re.match(r"^\s*(\d{2}-\d{2}-\d{4})", line)
                 if date_match:
-                    if current_row and (current_row['debit'] > 0 or current_row['credit'] > 0):
-                        all_rows.append([current_row['date'], current_row['desc'].strip(),
-                                       current_row['debit'], current_row['credit'], current_row['balance']])
+                    if current_row is not None and (current_row['debit'] > 0 or current_row['credit'] > 0):
+                        all_rows.append([
+                            current_row['date'],
+                            current_row['desc'].strip(),
+                            current_row['debit'],
+                            current_row['credit'],
+                            current_row['balance']
+                        ])
 
                     date_str = date_match.group(1)
                     remainder = line[date_match.end():].strip()
-                    amounts = [float(a.replace(',', '')) for a in re.findall(r'\d{1,3}(?:,\d{3})*(?:\.\d{2})?', line)]
+                    
+                    amounts = re.findall(r'\b\d{1,3}(?:,\d{3})*(?:\.\d{2})?\b', line)
+                    amounts = [float(amt.replace(',', '')) for amt in amounts if amt.replace(',', '').replace('.', '').replace('', '').isdigit() or '.' in amt]
+
                     debit = credit = balance = 0.0
                     if amounts:
                         balance = amounts[-1]
                         if len(amounts) >= 2:
-                            prev = amounts[-2]
-                            debit = prev if prev < balance else 0
-                            credit = prev if prev > balance else 0
-                        if credit == 0 and len(amounts) >= 2:
+                            prev_amt = amounts[-2]
+                            if prev_amt < balance:
+                                debit = prev_amt
+                            else:
+                                credit = prev_amt
+                        if credit == 0 and debit == 0 and len(amounts) >= 2:
                             credit = amounts[0] if amounts[0] > balance else 0
 
-                    desc = re.sub(r'\b\d{1,3}(?:,\d{3})*(?:\.\d{2})?\b', '', remainder)
-                    desc = re.sub(r'\s+', ' ', desc).strip()
+                    desc = re.sub(r'\b\d{1,3}(?:,\d{3})*(?:\.\d{2})?\b', '', remainder).strip()
+                    desc = re.sub(r'\s+', ' ', desc)
 
-                    current_row = {'date': date_str, 'desc': desc or remainder,
-                                 'debit': debit, 'credit': credit, 'balance': balance}
-                elif current_row:
+                    current_row = {
+                        'date': date_str,
+                        'desc': desc if desc else remainder,
+                        'debit': debit,
+                        'credit': credit,
+                        'balance': balance
+                    }
+                elif current_row is not None:
                     current_row['desc'] += " " + line.strip()
 
-            if current_row and (current_row['debit'] > 0 or current_row['credit'] > 0):
-                all_rows.append([current_row['date'], current_row['desc'].strip(),
-                               current_row['debit'], current_row['credit'], current_row['balance']])
+            if current_row is not None and (current_row['debit'] > 0 or current_row['credit'] > 0):
+                all_rows.append([
+                    current_row['date'],
+                    current_row['desc'].strip(),
+                    current_row['debit'],
+                    current_row['credit'],
+                    current_row['balance']
+                ])
 
-    if not all_rows: return pd.DataFrame()
+    if not all_rows:
+        return pd.DataFrame()
 
     df = pd.DataFrame(all_rows, columns=["Tran Date", "Particulars", "Debit", "Credit", "Balance"])
     df["Tran Date"] = pd.to_datetime(df["Tran Date"], format="%d-%m-%Y", dayfirst=True)
-    df[["Debit", "Credit", "Balance"]] = df[["Debit", "Credit", "Balance"]].apply(pd.to_numeric, errors='coerce').fillna(0)
+    df["Debit"] = pd.to_numeric(df["Debit"], errors='coerce').fillna(0.0)
+    df["Credit"] = pd.to_numeric(df["Credit"], errors='coerce').fillna(0.0)
+    df["Balance"] = pd.to_numeric(df["Balance"], errors='coerce').fillna(0.0)
     df = df.sort_values("Tran Date").reset_index(drop=True)
     df["Year-Month"] = df["Tran Date"].dt.strftime("%Y - %B")
-    df["Category"] = df["Particulars"].apply(categorize_transaction)
+
+    # Extract clean merchant name (optional enhancement)
+    def extract_merchant(text):
+        if pd.isna(text):
+            return "Unknown"
+        text = text.upper()
+        if "UPI" in text:
+            parts = text.split("/")
+            for p in parts[2:]:
+                if p and not p.startswith("P2") and len(p) > 3:
+                    return p.strip()[:25]
+        return text.split("/")[0].strip()[:25]
+
+    df["Merchant"] = df["Particulars"].apply(extract_merchant)
+
     return df
 
-# ========================= STREAMLIT UI =========================
+# ------------------- Streamlit App -------------------
+st.set_page_config(page_title="Axis Bank Analyzer + Summary", layout="wide")
 st.title("Axis Bank Statement Analyzer")
-st.caption("Auto-categorizes expenses • Dark Mode • Search & Summary • Monthly Report")
+st.markdown("**Upload → Filter → Search → Get Instant Summary!**")
 
-uploaded_file = st.file_uploader("Upload your Axis Bank PDF", type="pdf")
+uploaded_file = st.file_uploader("Upload Axis Bank PDF Statement", type="pdf")
 
-if uploaded_file:
-    with st.spinner("Analyzing your statement..."):
+if uploaded_file is not None:
+    with st.spinner("Extracting transactions..."):
         df = parse_axis_pdf(uploaded_file.read())
 
     if df.empty:
         st.error("No transactions found!")
     else:
-        st.success(f"Found {len(df):,} transactions • ₹{df['Debit'].sum():,.0f} spent")
+        st.success(f"Extracted {len(df):,} transactions")
 
-        # Summary Cards
         col1, col2, col3, col4 = st.columns(4)
-        with col1: st.metric("Total Spent", f"₹{df['Debit'].sum():,.0f}")
-        with col2: st.metric("Total Received", f"₹{df['Credit'].sum():,.0f}")
-        with col3: st.metric("Net Change", f"₹{df['Credit'].sum() - df['Debit'].sum():,.0f}")
-        with col4: st.metric("Final Balance", f"₹{df['Balance'].iloc[-1]:,.0f}")
+        with col1: st.metric("Total Debit", f"₹{df['Debit'].sum():,.2f}")
+        with col2: st.metric("Total Credit", f"₹{df['Credit'].sum():,.2f}")
+        with col3: st.metric("Net Flow", f"₹{df['Credit'].sum() - df['Debit'].sum():,.2f}")
+        with col4: st.metric("Final Balance", f"₹{df['Balance'].iloc[-1]:,.2f}")
 
         st.markdown("---")
+        st.subheader("Filters")
 
-        # Filters
         col1, col2 = st.columns([1, 3])
         with col1:
-            months = ["All"] + sorted(df["Year-Month"].unique().tolist())
-            month = st.selectbox("Month", months)
+            months = ["All Months"] + sorted(df["Year-Month"].unique().tolist())
+            selected_month = st.selectbox("Select Month", months)
+
         with col2:
-            search = st.text_input("Search in Particulars", placeholder="e.g. Playo, Zomato, Petrol")
+            search_term = st.text_input("Search in Particulars (e.g. 'PLAYO', 'Zomato', 'UPI')", "")
 
-        filtered = df.copy()
-        if month != "All":
-            filtered = filtered[filtered["Year-Month"] == month]
-        if search:
-            filtered = filtered[filtered["Particulars"].str.contains(search, case=False, na=False)]
+        filtered_df = df.copy()
+        if selected_month != "All Months":
+            filtered_df = filtered_df[filtered_df["Year-Month"] == selected_month]
+        if search_term:
+            filtered_df = filtered_df[filtered_df["Particulars"].str.contains(search_term, case=False, na=False)]
 
-        # Category Summary
-        if search:
-            st.subheader(f"Summary: **{search.upper()}**")
-            cat_summary = filtered.groupby("Category").agg({"Debit": "sum", "Credit": "sum", "Particulars": "count"}).round(0)
-            cat_summary = cat_summary.rename(columns={"Particulars": "Count"}).sort_values("Debit", ascending=False)
+        st.write(f"**Showing {len(filtered_df):,} transactions**")
 
-            col1, col2 = st.columns([1.8, 2.2])
+        # SEARCH SUMMARY (Only if search term is entered)
+        if search_term.strip():
+            st.markdown("---")
+            st.subheader(f"Search Summary: **{search_term.upper()}**")
+
+            total_debit = filtered_df["Debit"].sum()
+            total_credit = filtered_df["Credit"].sum()
+            net = total_credit - total_debit
+
+            col1, col2, col3, col4 = st.columns(4)
             with col1:
-                st.dataframe(cat_summary.style.format({"Debit": "₹{:,.0f}", "Credit": "₹{:,.0f}", "Count": "{:}"}))
+                st.metric("Transactions", len(filtered_df))
             with col2:
-                if cat_summary["Debit"].sum() > 0:
-                    fig, ax = plt.subplots(figsize=(6, 4))
-                    ax.pie(cat_summary["Debit"], labels=cat_summary.index, autopct='%1.0f%%', startangle=90)
-                    ax.set_title("Spending by Category")
+                st.metric("Total Spent", f"₹{total_debit:,.2f}")
+            with col3:
+                st.metric("Total Received", f"₹{total_credit:,.2f}")
+            with col4:
+                st.metric("Net", f"₹{net:,.2f}", delta="+" if net > 0 else None)
+
+            # Top Merchants Summary
+            top_merchants = filtered_df.groupby("Merchant").agg({
+                "Debit": "sum",
+                "Credit": "sum",
+                "Particulars": "count"
+            }).rename(columns={"Particulars": "Count"}).round(2)
+            top_merchants = top_merchants.sort_values("Debit", ascending=False).head(10)
+
+            col1, col2 = st.columns([2, 2])
+
+            with col1:
+                st.write("**Top Payees / Merchants**")
+                st.dataframe(
+                    top_merchants.style.format({
+                        "Debit": "₹{:.2f}",
+                        "Credit": "₹{:.2f}",
+                        "Count": "{:.0f}"
+                    }),
+                    use_container_width=True
+                )
+
+            with col2:
+                if len(top_merchants) > 1 and total_debit > 0:
+                    st.write("**Spending Breakdown**")
+                    fig, ax = plt.subplots(figsize=(6, 4.5))
+                    colors = plt.cm.Set3(range(len(top_merchants)))
+                    wedges, texts, autotexts = ax.pie(
+                        top_merchants["Debit"],
+                        labels=top_merchants.index,
+                        autopct=lambda pct: f"₹{int(pct/100*total_debit)}\n({pct:.1f}%)" if pct > 5 else "",
+                        startangle=90,
+                        colors=colors,
+                        textprops={'fontsize': 10}
+                    )
+                    ax.axis('equal')
+                    ax.set_title("Where the money went", fontsize=12, pad=15)
+                    plt.tight_layout()
                     st.pyplot(fig)
-                    plt.close(fig)
+                    plt.close(fig)  # Prevent memory leak
+                else:
+                    st.info("Not enough spending data for a chart.")
+        # Show Data Table
+        display_df = filtered_df[['Tran Date', 'Particulars', 'Debit', 'Credit', 'Balance']].copy()
+        display_df["Tran Date"] = display_df["Tran Date"].dt.strftime("%d-%b-%Y")
 
-        # Monthly Category Chart
         st.markdown("---")
-        st.subheader("Monthly Spending by Category")
-        monthly_cat = filtered.groupby(["Year-Month", "Category"])["Debit"].sum().unstack(fill_value=0)
-        if not monthly_cat.empty:
-            fig, ax = plt.subplots(figsize=(10, 5))
-            monthly_cat.plot(kind="bar", stacked=True, ax=ax, cmap="tab20")
-            ax.set_ylabel("Amount (₹)")
-            ax.set_title("Expense Breakdown")
-            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-            st.pyplot(fig)
-            plt.close(fig)
+        st.dataframe(
+            display_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Debit": st.column_config.NumberColumn("Debit", format="₹%.2f"),
+                "Credit": st.column_config.NumberColumn("Credit", format="₹%.2f"),
+                "Balance": st.column_config.NumberColumn("Balance", format="₹%.2f"),
+            }
+        )
 
-        # Data Table
-        display = filtered[["Tran Date", "Particulars", "Category", "Debit", "Credit"]].copy()
-        display["Tran Date"] = display["Tran Date"].dt.strftime("%d %b")
-        st.dataframe(display, use_container_width=True, hide_index=True)
-
-        # Download
-        csv = display.to_csv(index=False).encode()
-        st.download_button("Download Data", csv, "my_expenses.csv", "text/csv")
+        csv = display_df.to_csv(index=False).encode()
+        st.download_button("Download Results as CSV", csv, f"axis_search_{search_term or 'all'}.csv", "text/csv")
 
 else:
-    st.info("Upload your Axis Bank PDF statement to begin!")
-    st.markdown("### Features\n- Auto-categorizes every transaction\n- Dark/Light mode\n- Search with instant summary\n- Beautiful charts\n- Export to CSV")
+    st.info("Upload your Axis Bank PDF statement to start analyzing!")
+    st.markdown("""
+    ### Features
+    - Accurate extraction from real Axis Bank PDFs
+    - Month filter + Full-text search
+    - Instant summary when you search (e.g. "Zomato", "Swiggy", "PLAYO")
+    - Top merchants & pie chart
+    - Export filtered data
+    """)
