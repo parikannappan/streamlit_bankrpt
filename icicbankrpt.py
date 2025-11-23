@@ -119,8 +119,8 @@ def main():
         raw_df = load_data(uploaded_file)
         
         if raw_df is not None:
-            st.write("Debug: Detected Columns:", raw_df.columns.tolist()) # Debug info
-            df = process_data(raw_df)
+            #st.write("Debug: Detected Columns:", raw_df.columns.tolist()) # Debug info
+            #df = process_data(raw_df)
             
             # Check if critical columns exist before proceeding
             #if 'Withdrawals' not in df.columns or 'Deposits' not in df.columns:
@@ -209,5 +209,6 @@ if __name__ == "__main__":
          
             
    
+
 
 
