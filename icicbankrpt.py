@@ -1,112 +1,212 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Jun 19 18:13:14 2024
+Created on Wed Jun 19 18:13:14 2025
 
 @author: ACER
 """
 
 import pandas as pd
-import streamlit as st 
-import xlrd
-import regex as re
-st.set_page_config(page_title="Bank Statement Search", page_icon="bank", layout="wide")
-st.title("  :bank: :blue[ICICI Bank Statement Search App]")
-fl = st.file_uploader(" :red[Upload your monthly/early stmt using 'Browse files' type xls] ", type=(["xls"]))
-#st.button("Rerun") 
-if fl is not None:
-    @st.cache_data
-    def load_data(fl):
-        Bankdata = pd.read_excel(fl, header=12)
-        print('columns ==', Bankdata.columns)
-        return Bankdata
-    Bankdata = load_data(fl)
-    Bankdata.rename(columns={'Withdrawal Amount (INR )':'Withdrawals', 'Deposit Amount (INR )':'Deposits'}, inplace=True)
-    print('columns 3', Bankdata.columns)
-    #print('head', Bankdata.head(7))
-    Bankdata['Withdrawals']= pd.to_numeric(Bankdata['Withdrawals'], errors='coerce') 
-    #Bankdata['Balance']= pd.to_numeric(Bankdata['Balance'], errors='coerce')
-    Bankdata['Deposits']= pd.to_numeric(Bankdata['Deposits'],  errors='coerce')
-    Bankdata = Bankdata.drop(['Unnamed: 0','Cheque Number'], axis=1)
-    Bankdata['Transaction Remarks'].fillna('', inplace=True)
-    # Bankdata will be displayed at the end of the page
-      
-    top_5_withdrawals = Bankdata.sort_values(by='Withdrawals', ascending=False).head(6)  
-    #top_5_withdrawals = top_5_withdrawals.reset_index(drop=True)
-    #top_5_wthdropt  = top_5_withdrawals.drop(index=0, axis=0, inplace=False) #drop Totals row
-    top_5_deposits = Bankdata.sort_values(by='Deposits', ascending=False).head(6)
-    #top_5_deposits = top_5_deposits.reset_index(drop=True)
-    #top_5_depdropt  = top_5_deposits.drop(index=0, axis=0, inplace=False)
-    with st.expander("Top 5 Withdrawls"):
-       st.dataframe(top_5_withdrawals)  
-       st.bar_chart(top_5_withdrawals[['Value Date', 'Withdrawals']], x='Value Date', y='Withdrawals')
-    with st.expander("Top 5 Deposits"):  
-       st.dataframe(top_5_deposits)
+import streamlit as st
+import re
+import io
+
+# --- Configuration ---
+st.set_page_config(page_title="Bank Statement Search", page_icon=":bank:", layout="wide")
+
+# --- Helper Functions ---
+
+def clean_currency(x):
+    """Cleans currency strings and converts to float."""
+    if isinstance(x, (int, float)):
+        return x
+    if isinstance(x, str):
+        # Remove commas and other non-numeric chars except dot and minus
+        clean_str = re.sub(r'[^\d.-]', '', x)
+        try:
+            return float(clean_str)
+        except ValueError:
+            return 0.0
+    return 0.0
+
+@st.cache_data
+def load_data(file):
+    """
+    Loads data from the uploaded Excel file using fixed header row 12 (original behavior).
+    """
+    try:
+        # Use fixed header row as requested
+        df = pd.read_excel(file, header=12)
+        return df
+    except Exception as e:
+        st.error(f"Error loading file: {e}")
+        return None
+
+def process_data(df):
+    """
+    Cleans and processes the dataframe: renames columns, converts types, filters invalid rows.
+    """
+    # Normalize column names for easier matching
+    df.columns = df.columns.str.strip()
     
-    #
-    word_list = Bankdata['Transaction Remarks'].str.split().explode().tolist()
-       #print(f'word_list', word_list)
-    word_list = [str(word) for word in word_list] 
+    # Flexible Column Mapping
+    col_map = {}
+    for col in df.columns:
+        col_lower = col.lower()
+        if 'withdrawal' in col_lower or 'debit' in col_lower:
+            col_map[col] = 'Withdrawals'
+        elif 'deposit' in col_lower or 'credit' in col_lower:
+            col_map[col] = 'Deposits'
+        elif 'date' in col_lower and 'value' in col_lower:
+            col_map[col] = 'Value Date'
+        elif 'date' in col_lower and 'transaction' in col_lower:
+            col_map[col] = 'Transaction Date'
+        elif 'remark' in col_lower or 'particular' in col_lower or 'description' in col_lower:
+            col_map[col] = 'Transaction Remarks'
+        elif 'balance' in col_lower:
+            col_map[col] = 'Balance'
+            
+    df.rename(columns=col_map, inplace=True)
+    
+    # Ensure required columns exist
+    required_cols = ['Withdrawals', 'Deposits', 'Transaction Remarks']
+    missing_cols = [c for c in required_cols if c not in df.columns]
+    if missing_cols:
+        st.warning(f"Could not automatically identify columns: {missing_cols}. Please check your file format.")
+        return df # Return as is, might fail later but better than crashing here
+
+    # Data Cleaning
+    df['Withdrawals'] = df['Withdrawals'].apply(clean_currency)
+    df['Deposits'] = df['Deposits'].apply(clean_currency)
+    
+    # Fill NaNs
+    df['Withdrawals'].fillna(0, inplace=True)
+    df['Deposits'].fillna(0, inplace=True)
+    df['Transaction Remarks'].fillna('', inplace=True)
+    
+    # Filter out "Total" rows or empty dates if possible
+    if 'Value Date' in df.columns:
+        df = df[pd.to_datetime(df['Value Date'], errors='coerce').notna()]
+        
+    return df
+
+def extract_keywords(df):
+    """Extracts keywords from transaction remarks."""
+    word_list = df['Transaction Remarks'].str.split().explode().tolist()
+    word_list = [str(word) for word in word_list]
+    
     new_word_list = []
     for word in word_list:
-          if isinstance(word, str) and '/' in word:
+        if isinstance(word, str) and '/' in word:
             new_word_list.extend(word.split('/'))
-          else:
+        else:
             new_word_list.append(word)
-    new_word_list = [word1 for word1 in new_word_list if not word1.endswith(',')]
-    words_set = set(new_word_list)
-    few_trans_all = list(words_set)
-    mischr_list = ['IN','OF','of','FROM', '+', 'ORG','from', 'To','R','N',
-                      '-','Ref:','NO', 'in','F','B']
-    few_trans = [item for item in few_trans_all if item not in mischr_list ]
-       #combined_set = set().union(*pt_set_list)
-    col1, col2 = st.columns(2)
-    with col1:
-        selected_key =   st.multiselect(f' "you can choose keywords from drop down " ', few_trans) 
-        #st.dataframe(selected_key)
-        all_matches = Bankdata['Transaction Remarks'].str.extractall(f'({"|".join(selected_key)})', flags=re.IGNORECASE)[0]
-        keyword_counts = all_matches.value_counts().reset_index()
-        keyword_counts.columns = ['Keyword', 'Count']
-        if len(keyword_counts) > 0:
-           st.table(keyword_counts)
-    choices = '|'.join(selected_key)  # Regex OR pattern
-    #choice_data = Bankdata[Bankdata['Transaction Remarks'].str.contains(choices, case=False, regex=True)]
-    choice_data = Bankdata[Bankdata['Transaction Remarks'].str.contains(choices, case=False, regex=True, na=False)].copy()
-    choice_data['Matched_Keyword'] = (
-        choice_data['Transaction Remarks']
-       .str.extract(f'({"|".join(selected_key)})', flags=re.IGNORECASE, expand=False)
-       )
-    choice_data = choice_data.drop(['Value Date'], axis=1)
-    if len(selected_key) > 0:
-      st.write(f' :red[Search result not case sensitive ] ')  
-      st.dataframe(choice_data)
-      st.bar_chart(choice_data[['Transaction Date', 'Withdrawals', 'Deposits', 'Matched_Keyword']], x='Matched_Keyword', y=['Withdrawals', 'Deposits'], color='Matched_Keyword')
-    #
-    stinput = st.text_input("Enter keyword to search -")
-    if len(stinput) > 0:
-       print('stinput-1', stinput)
-       #print(np.isnan(stinput))
-       dfs1 = Bankdata.loc[Bankdata['Transaction Remarks'].str.contains(stinput, case=False)]
-       def functrunc(description):
-           templst = list(description.split('/'))
-           return templst[3:5]
-       dfs1['Transaction'] = dfs1['Transaction Remarks'].apply(functrunc) #adding a column for description
-       dfs1w = dfs1['Withdrawals'].sum()
-       dfs1d = dfs1['Deposits'].sum()
-       sumdif = dfs1w - dfs1d
-       st.write(f':money_with_wings: :red[WITHDRAWALS  -:  {dfs1w}]   :moneybag: :green[DEPOSITS   -:  {dfs1d}  ]')
-       st.write(f':abacus: With - Dep = {sumdif}                 ')
-       dfs2 = dfs1[['Value Date','Transaction', 'Withdrawals', 'Deposits','Transaction Remarks']] 
-       with st.expander(f'"View Transactions of input {stinput}"'):
-          st.dataframe(dfs2) 
-       
-       with st.expander("View All Data"):
-          st.dataframe(Bankdata[['Value Date','Withdrawals', 'Deposits','Transaction Remarks']])  
-       
+            
+    # Filter junk words
+    mischr_list = {'IN','OF','of','FROM', '+', 'ORG','from', 'To','R','N',
+                   '-','Ref:','NO', 'in','F','B', 'The', 'the', 'A', 'a'}
     
-    else:
-        print('stinput-2 ', stinput)
-        dfs1d = 0
-        dfs1w = 0
+    clean_words = [w for w in new_word_list if w not in mischr_list and not w.endswith(',') and len(w) > 1]
+    return sorted(list(set(clean_words)))
+
+# --- Main App ---
+
+def main():
+    st.title("  :bank: :blue[ICICI Bank Statement Search App]")
+    
+    uploaded_file = st.file_uploader(" :red[Upload your monthly/early stmt using 'Browse files' type xls/xlsx] ", type=(["xls", "xlsx"]))
+
+    if uploaded_file is not None:
+        raw_df = load_data(uploaded_file)
+        
+        if raw_df is not None:
+            st.write("Debug: Detected Columns:", raw_df.columns.tolist()) # Debug info
+            df = process_data(raw_df)
+            
+            # Check if critical columns exist before proceeding
+            if 'Withdrawals' not in df.columns or 'Deposits' not in df.columns:
+                st.error("Critical columns (Withdrawals/Deposits) not found. Please check the 'Debug: Detected Columns' above and ensure your file has the correct headers.")
+                st.stop()
+
+            # --- Summary Metrics ---
+            total_withdrawals = df['Withdrawals'].sum()
+            total_deposits = df['Deposits'].sum()
+            net_flow = total_deposits - total_withdrawals
+            
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Total Withdrawals", f"₹{total_withdrawals:,.2f}")
+            col2.metric("Total Deposits", f"₹{total_deposits:,.2f}")
+            col3.metric("Net Flow", f"₹{net_flow:,.2f}", delta_color="normal")
+            
+            st.divider()
+
+            # --- Top Transactions ---
+            col_top1, col_top2 = st.columns(2)
+            
+            with col_top1:
+                st.subheader("Top 5 Withdrawals")
+                top_5_withdrawals = df.sort_values(by='Withdrawals', ascending=False).head(5)
+                st.dataframe(top_5_withdrawals[['Value Date', 'Transaction Remarks', 'Withdrawals']], use_container_width=True)
+                
+            with col_top2:
+                st.subheader("Top 5 Deposits")
+                top_5_deposits = df.sort_values(by='Deposits', ascending=False).head(5)
+                st.dataframe(top_5_deposits[['Value Date', 'Transaction Remarks', 'Deposits']], use_container_width=True)
+
+            st.divider()
+
+            # --- Keyword Search ---
+            st.subheader("Keyword Analysis")
+            all_keywords = extract_keywords(df)
+            
+            col_search1, col_search2 = st.columns([1, 2])
+            
+            with col_search1:
+                selected_keys = st.multiselect('Choose keywords to filter:', all_keywords)
+            
+            if selected_keys:
+                # Regex OR pattern
+                pattern = '|'.join([re.escape(k) for k in selected_keys])
+                
+                # Filter data
+                choice_data = df[df['Transaction Remarks'].str.contains(pattern, case=False, regex=True, na=False)].copy()
+                
+                # Extract matched keyword for grouping
+                choice_data['Matched_Keyword'] = choice_data['Transaction Remarks'].str.extract(f'({pattern})', flags=re.IGNORECASE, expand=False)
+                
+                with col_search2:
+                    st.info(f"Found {len(choice_data)} transactions matching selected keywords.")
+                
+                st.dataframe(choice_data)
+                
+                # Chart
+                if not choice_data.empty:
+                    chart_data = choice_data.groupby('Matched_Keyword')[['Withdrawals', 'Deposits']].sum().reset_index()
+                    st.bar_chart(chart_data, x='Matched_Keyword', y=['Withdrawals', 'Deposits'])
+
+            st.divider()
+            
+            # --- Free Text Search ---
+            st.subheader("Free Text Search")
+            search_text = st.text_input("Enter text to search in remarks:")
+            
+            if search_text:
+                search_results = df[df['Transaction Remarks'].str.contains(search_text, case=False, na=False)]
+                
+                s_withdrawals = search_results['Withdrawals'].sum()
+                s_deposits = search_results['Deposits'].sum()
+                
+                st.write(f"**Results for '{search_text}':**")
+                st.write(f":money_with_wings: Withdrawals: **{s_withdrawals:,.2f}** | :moneybag: Deposits: **{s_deposits:,.2f}** | Net: **{s_deposits - s_withdrawals:,.2f}**")
+                
+                st.dataframe(search_results)
+                
+            with st.expander("View Full Data"):
+                st.dataframe(df)
+
+if __name__ == "__main__":
+    main()
+
          
             
    
+
